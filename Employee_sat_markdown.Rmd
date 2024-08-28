@@ -1,0 +1,261 @@
+---
+title: "Employee Satisfaction Survey"
+author: "Shana Nasrin"
+date: "2024-08-27"
+output: html_document
+---
+
+#### Install the packages
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+```
+#### Load the CSV File
+```{r}
+employee_sat <- read.csv("C:/Users/shana/OneDrive/Desktop/Employee Attrition.csv")
+```
+
+#### Take a look at the dataset 
+```{r}
+head(employee_sat)
+```
+### View the data and obtain statistical summaries. Ensure data types are appropriate and there is no missing data.Determine the outcome and input variables.
+#### Structure of the Data Frame
+```{r}
+str(employee_sat)
+```
+
+#### Check for any missing values
+```{r}
+missing_values <- sum(is.na(employee_sat))
+print(paste("total missing values:", missing_values))
+```
+
+#### Statistical Summary
+```{r}
+summary(employee_sat)
+```
+
+#### Remove all the missing values
+```{r}
+employee_sat_clean <- na.omit(employee_sat)
+```
+
+#### Statistical summary of cleaned data
+```{r}
+summary(employee_sat_clean)
+```
+### Use the whisker boxplot to determine whether there is an outlier in the data.
+#### Visualize Satisfaction level using box plot
+```{r}
+ggplot(data = employee_sat_clean, aes(y = satisfaction_level)) + 
+  geom_boxplot(fill = "green", color = "darkblue") + 
+  labs(title = "The box plot of satisfaction level", y = "satisfaction level")
+```
+
+### Use the appropriate diagram to demonstrate the categorical variable in the data.
+#### Distribution of Departments
+```{r}
+ggplot(data = employee_sat_clean, aes(x = dept)) +
+  geom_bar(fill = "darkblue", color = "black") + 
+  labs(title = "The distribution of departments", x = "Department") + 
+  geom_text(stat = 'count', aes(label = ..count..), 
+            position = position_stack(vjust = 1.2))
+```
+
+#### Distribution of Salary
+```{r}
+ggplot(data = employee_sat_clean, aes(x = salary)) +
+  geom_bar(fill = "orange", color = "black") + 
+  labs(title = "The distribution of Salary", x = "salary") + 
+  geom_text(stat = 'count', aes(label = ..count..), 
+            position = position_stack(vjust = 0.5))
+```
+
+### Explain to your manager what actually leads to differences in income (salary).
+#### Convert the salary into an ordered factor
+```{r}
+employee_sat_clean$salary <- factor(employee_sat_clean$salary, 
+                                    levels = c("low", "medium", "high"), ordered = TRUE)
+```
+
+#### Analyze relationship between salary and other variables
+```{r}
+salary_analysis <- employee_sat_clean %>%
+  group_by(salary) %>%
+  summarise(
+    avg_satisfaction = mean(satisfaction_level),
+    avg_evaluation = mean(last_evaluation),
+    avg_projects = mean(number_project),
+    avg_hours = mean(average_montly_hours),
+    avg_time_at_company = mean(time_spend_company),
+    promotion_rate = mean(promotion_last_5years)
+  )
+print(salary_analysis)
+```
+
+#### Visualize relationship between salary and other variables
+```{r}
+p1 <- ggplot(data = employee_sat_clean, aes(x = salary, y = last_evaluation)) +
+  geom_boxplot(fill = "blue", color = "black") + 
+  labs(title = "Salary VS Evaluation Score", x = "salary", y = "Last Evaluation Score") 
+
+p2 <- ggplot(data = employee_sat_clean, aes(x = salary, y = number_project)) +
+  geom_boxplot(fill = "blue", color = "black") + 
+  labs(title = "Salary VS Number of Projects", x = "salary", y = "Number of Projects")
+
+p3 <- ggplot(data = employee_sat_clean, aes(x = salary, y = time_spend_company)) +
+  geom_boxplot(fill = "blue", color = "black") + 
+  labs(title = "Salary VS Years at Company", x = "salary", y = "Years at Company")
+
+p4 <- ggplot(data = employee_sat_clean, aes(x = salary, y = average_montly_hours)) +
+  geom_boxplot(fill = "blue", color = "black") + 
+  labs(title = "Salary VS Average Monthly Hours", x = "salary", y = "Average Monthly Hours")
+```
+
+#### Install gridExtra to view the plots in a grid manner
+```{r}
+library(gridExtra)
+```
+
+#### Arrange the plots in a grid manner
+```{r}
+grid.arrange(p1, p2, p3, p4, ncol = 2)
+```
+
+#### Salary distribution across departments
+```{r}
+dept_salary <- employee_sat_clean %>%
+  group_by(dept) %>%
+  summarise(
+    low = sum(salary == "low")/n(),
+    medium = sum(salary == "medium")/n(),
+    high = sum(salary == "high")/n()
+  ) %>%
+  arrange(desc(high))
+
+print(dept_salary)
+```
+
+#### Visualize salary distribution across departments
+```{r}
+ggplot(data = employee_sat_clean, aes(x = dept, fill = salary)) +
+  geom_bar(position = "fill") +
+  labs(title = "Salary distribution across different departments", x = "Departments", y = "Proportion") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+### Determine the relationship among the variables.
+#### Install the package corrplot for correlation analysis
+```{r}
+library(corrplot)
+```
+
+#### Select numeric variables for correlation analysis
+```{r}
+num_vars <- employee_sat_clean %>%
+  select(satisfaction_level, last_evaluation, number_project, average_montly_hours, 
+         time_spend_company,Work_accident, promotion_last_5years)
+```
+
+#### calculate correlation matrix
+```{r}
+corr_matrix <- cor(num_vars)
+print(corr_matrix)
+```
+
+#### Create correlation plot
+```{r}
+corrplot(corr_matrix, method = "color", type = "upper", order = "hclust", 
+         tl.col = "black", tl.srt = 45, addCoef.col = "black", 
+         number.cex = 0.7, tl.cex = 0.7)
+```
+
+
+### Plot a necessary graph that you think it will aid in understanding the data.
+#### Calculate average satisfaction levels by salary and department
+```{r}
+avg_sat <- employee_sat_clean %>%
+  group_by(salary, dept) %>%
+  summarise(average_satisfaction = mean(satisfaction_level), count = n(), .groups = "drop") %>%
+  arrange(dept, salary)
+print(avg_sat)
+```
+
+#### Calculate overall statistics of satisfaction
+```{r}
+overall_sat_stat <- employee_sat_clean %>%
+  summarise(
+    avg_satisfaction = mean(satisfaction_level),
+    median_satisfaction = median(satisfaction_level),
+    sd_satisfaction = sd(satisfaction_level)
+  )
+print(overall_sat_stat)
+```
+
+#### Satisfaction levels by salary and department
+```{r}
+ggplot(data = employee_sat_clean, aes(x = salary, y = satisfaction_level, fill = dept)) + 
+  geom_boxplot() +
+  facet_wrap(~ dept, scales = "free_x") +
+  labs(title = "Satisfaction levels by salary and department", x = "Salary", 
+       y = "Satisfaction level", fill = "Department") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none")
+```
+
+### Identify and discuss anything else interesting that you see in the data.
+#### Calculate the project engagement
+```{r}
+project_engagement <- employee_sat_clean %>%
+  group_by(number_project) %>%
+  summarise(
+    avg_satisfaction = mean(satisfaction_level),
+    avg_evaluation = mean(last_evaluation),
+    avg_monthly_hours = mean(average_montly_hours),
+    count = n(),
+    .groups = "drop"
+  )
+print(project_engagement)
+```
+
+#### calculate work-life balance
+```{r}
+work_life_balance <- employee_sat_clean %>%
+  group_by(salary) %>%
+  summarise(
+    avg_satisfaction = mean(satisfaction_level),
+    avg_monthly_hours = mean(average_montly_hours),
+    count = n(),
+    .groups = "drop"
+  )
+print(work_life_balance)
+```
+
+#### Analyze promotion effects
+```{r}
+promotion <- employee_sat_clean %>%
+  group_by(promotion_last_5years) %>%
+  summarise(
+    avg_satisfaction = mean(satisfaction_level),
+    avg_evaluation = mean(last_evaluation),
+    avg_monthly_hours = mean(average_montly_hours),
+    avg_time_spend = mean(time_spend_company),
+    count = n(),
+    .groups = "drop"
+  )
+print(promotion)
+```
+
+
+### Report the conclusions of your analysis by writing a simple explanation that assumes no knowledge of statistics.
+
+1. Most employees work 200 hours per month, no matter their salary is. Employees with higher salaries are much happier even though they work similar hours to others.
+
+2. Employees working on 3 to 5 projects are much happier than working on 6 or more projects. As project workload increases, the employee experience potential burnout.
+
+3. Employees who got promotion in the last 5 years are happier than others who did not get the promotion. This depicts that career growth is important for job satisfaction.
+
+4. Working long hours make employees feel less satisfied than others.
